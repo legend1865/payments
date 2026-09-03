@@ -1,0 +1,70 @@
+[project]
+name = "payments-test-hh"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.19.1",
+    "asyncpg>=0.31.0",
+    "fastapi[standard]>=0.141.1",
+    "faststream[cli,rabbit]>=0.7.5",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy[asyncio]>=2.0,<2.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.5",
+    "rust-just>=1.58.0",
+]
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ARG",
+    "ANN",
+    "D",
+    "PLR0913",
+    "EM101",
+    "PLW2901",
+    "RET505",
+    "SIM103",
+    "ISC003",
+    "PGH003",
+    "COM812",
+    "RUF001",
+    "TRY401",
+    "S307",
+    "S102",
+    "E203",
+    "CPY001",
+    "S104",
+    "B008",
+    "FAST002",
+]
+
+
+[tool.ruff.lint.isort]
+known-first-party = ["application", "infrastructure", "presentation"]
+section-order = ["future", "standard-library", "first-party", "third-party", "local-folder"]
+lines-after-imports = 2
+lines-between-types = 0
+order-by-type = true
+combine-as-imports = true
+force-single-line = false
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
