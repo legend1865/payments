@@ -1,4 +1,4 @@
-from application.dto.outbox import OutboxMessage
+from application.dto.outbox import OutboxMessage, PaymentCreatedEvent
 from application.dto.payment import (
     CreatePaymentCommand,
     CreatePaymentRequest,
@@ -17,6 +17,7 @@ __all__ = (
     "Currency",
     "OutboxMessage",
     "Payment",
+    "PaymentCreatedEvent",
     "PaymentResponse",
     "PaymentStatus",
 )

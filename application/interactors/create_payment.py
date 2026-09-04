@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from application.dto import CreatePaymentCommand, OutboxMessage, Payment, PaymentStatus
+from application.dto import CreatePaymentCommand, OutboxMessage, Payment, PaymentCreatedEvent, PaymentStatus
 from application.interfaces import OutboxGateway, PaymentGateway, TransactionManager
 
 
@@ -41,7 +41,7 @@ class CreatePaymentInteractor:
             outbox_message = OutboxMessage(
                 id=uuid4(),
                 event_name=PAYMENT_CREATED_EVENT,
-                payload={"payment_id": str(payment.id)},
+                payload=PaymentCreatedEvent(payment_id=payment.id).model_dump(mode="json"),
                 created_at=created_at,
                 published_at=None,
             )

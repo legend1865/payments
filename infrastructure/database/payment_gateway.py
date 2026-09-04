@@ -1,9 +1,10 @@
+from datetime import datetime
 from uuid import UUID
 
 from application.dto import Currency, Payment, PaymentStatus
 from infrastructure.database.models import PaymentModel
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -35,6 +36,19 @@ class SQLAlchemyPaymentGateway:
         statement = select(PaymentModel).where(PaymentModel.idempotency_key == idempotency_key)
         model = await self._session.scalar(statement)
         return self._to_dto(model) if model is not None else None
+
+    async def update_status(
+        self,
+        payment_id: UUID,
+        status: PaymentStatus,
+        processed_at: datetime,
+    ) -> None:
+        statement = (
+            update(PaymentModel)
+            .where(PaymentModel.id == payment_id)
+            .values(status=status.value, processed_at=processed_at)
+        )
+        await self._session.execute(statement)
 
     @staticmethod
     def _to_dto(model: PaymentModel) -> Payment:

@@ -61,6 +61,22 @@ services:
         condition: service_started
     command: ["python", "-m", "presentation.amqp_api.main"]
 
+  consumer:
+    build: .
+    environment:
+      API_KEY: ${API_KEY}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      WEBHOOK_TIMEOUT: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
+    command: ["faststream", "run", "presentation.amqp_api.consumer_main:app"]
+
 volumes:
   postgres_data:
   rabbitmq_data:

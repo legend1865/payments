@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from infrastructure.config import Settings
+from infrastructure.config import load_config_from_env
 from infrastructure.container import create_publish_outbox_interactor
 from infrastructure.database import create_engine, create_session_factory
 from infrastructure.messaging import FastStreamMessagePublisher
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 async def run() -> None:
-    settings = Settings()
-    engine = create_engine(settings.database_url)
+    config = load_config_from_env()
+    engine = create_engine(config.DATABASE_URL)
     session_factory = create_session_factory(engine)
-    broker = RabbitBroker(settings.rabbitmq_url)
+    broker = RabbitBroker(config.RABBITMQ_URL)
 
     await broker.connect()
     await broker.declare_queue(payments_new_queue)
@@ -27,13 +27,13 @@ async def run() -> None:
             try:
                 async with session_factory() as session:
                     interactor = create_publish_outbox_interactor(session, message_publisher)
-                    await interactor(settings.outbox_batch_size)
+                    await interactor(config.OUTBOX_BATCH_SIZE)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Failed to publish outbox messages")
 
-            await asyncio.sleep(settings.outbox_poll_interval)
+            await asyncio.sleep(config.OUTBOX_POLL_INTERVAL)
     finally:
         await broker.close()
         await engine.dispose()

@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from infrastructure.config import Settings
+from infrastructure.config import Config, load_config_from_env
 from infrastructure.database import create_engine, create_session_factory
 from presentation.http_api.endpoints import router
 
@@ -18,7 +18,7 @@ def verify_api_key(
     request: Request,
     provided_api_key: Annotated[str | None, Security(api_key_header)],
 ) -> None:
-    expected_api_key = request.app.state.settings.api_key
+    expected_api_key = request.app.state.config.API_KEY
     if provided_api_key != expected_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -28,7 +28,7 @@ def verify_api_key(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    engine = create_engine(app.state.settings.database_url)
+    engine = create_engine(app.state.config.DATABASE_URL)
     app.state.session_factory = create_session_factory(engine)
     try:
         yield
@@ -36,14 +36,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await engine.dispose()
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(
         title="Payments processing service",
         version="1.0.0",
         lifespan=lifespan,
         dependencies=[Depends(verify_api_key)],
     )
-    app.state.settings = settings or Settings()
+    app.state.config = config or load_config_from_env()
     app.include_router(router)
     return app
 

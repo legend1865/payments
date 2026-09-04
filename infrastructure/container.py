@@ -1,5 +1,10 @@
-from application.interactors import CreatePaymentInteractor, GetPaymentInteractor, PublishOutboxInteractor
-from application.interfaces import MessagePublisher
+from application.interactors import (
+    CreatePaymentInteractor,
+    GetPaymentInteractor,
+    ProcessPaymentInteractor,
+    PublishOutboxInteractor,
+)
+from application.interfaces import MessagePublisher, WebhookGateway
 from infrastructure.database import (
     SQLAlchemyOutboxGateway,
     SQLAlchemyPaymentGateway,
@@ -33,4 +38,19 @@ def create_publish_outbox_interactor(
         transaction_manager=SQLAlchemyTransactionManager(session),
         outbox_gateway=SQLAlchemyOutboxGateway(session),
         message_publisher=message_publisher,
+    )
+
+
+def create_process_payment_interactor(
+    session: AsyncSession,
+    webhook_gateway: WebhookGateway,
+    success_probability: float,
+    processing_delay: tuple[float, float],
+) -> ProcessPaymentInteractor:
+    return ProcessPaymentInteractor(
+        transaction_manager=SQLAlchemyTransactionManager(session),
+        payment_gateway=SQLAlchemyPaymentGateway(session),
+        webhook_gateway=webhook_gateway,
+        success_probability=success_probability,
+        processing_delay=processing_delay,
     )
