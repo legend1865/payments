@@ -6,3 +6,6 @@ class Settings(BaseSettings):
 
     api_key: str
     database_url: str
+    rabbitmq_url: str
+    outbox_poll_interval: float = 1.0
+    outbox_batch_size: int = 100
