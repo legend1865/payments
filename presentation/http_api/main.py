@@ -1,12 +1,13 @@
-import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+from infrastructure.config import Settings
+from infrastructure.database import create_engine, create_session_factory
 from presentation.http_api.endpoints import router
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 
 
@@ -14,14 +15,10 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def verify_api_key(
+    request: Request,
     provided_api_key: Annotated[str | None, Security(api_key_header)],
 ) -> None:
-    expected_api_key = os.getenv("API_KEY")
-    if expected_api_key is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="API key is not configured",
-        )
+    expected_api_key = request.app.state.settings.api_key
     if provided_api_key != expected_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -30,18 +27,23 @@ def verify_api_key(
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    # Infrastructure resources will be initialized here on the database step.
-    yield
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    engine = create_engine(app.state.settings.database_url)
+    app.state.session_factory = create_session_factory(engine)
+    try:
+        yield
+    finally:
+        await engine.dispose()
 
 
-def create_app() -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="Payments processing service",
         version="1.0.0",
         lifespan=lifespan,
         dependencies=[Depends(verify_api_key)],
     )
+    app.state.settings = settings or Settings()
     app.include_router(router)
     return app
 
