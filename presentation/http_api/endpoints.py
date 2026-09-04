@@ -7,8 +7,11 @@ from application.dto import (
     PaymentResponse,
 )
 from application.exceptions import PaymentNotFoundError
-from application.interfaces import PaymentService
-from presentation.http_api.dependencies import get_payment_service
+from application.interactors import CreatePaymentInteractor, GetPaymentInteractor
+from presentation.http_api.dependencies import (
+    get_create_payment_interactor,
+    get_get_payment_interactor,
+)
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 
@@ -20,9 +23,9 @@ router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 async def create_payment(
     payload: CreatePaymentRequest,
     idempotency_key: str = Header(alias="Idempotency-Key"),
-    payment_service: PaymentService = Depends(get_payment_service),
+    interactor: CreatePaymentInteractor = Depends(get_create_payment_interactor),
 ) -> CreatePaymentResponse:
-    payment = await payment_service.create_payment(
+    payment = await interactor(
         CreatePaymentCommand(
             amount=payload.amount,
             currency=payload.currency,
@@ -42,10 +45,10 @@ async def create_payment(
 @router.get("/{payment_id}")
 async def get_payment(
     payment_id: UUID,
-    payment_service: PaymentService = Depends(get_payment_service),
+    interactor: GetPaymentInteractor = Depends(get_get_payment_interactor),
 ) -> PaymentResponse:
     try:
-        payment = await payment_service.get_payment(payment_id)
+        payment = await interactor(payment_id)
     except PaymentNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found") from error
 
