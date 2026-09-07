@@ -46,7 +46,9 @@ class CreatePaymentInteractor:
                 published_at=None,
             )
 
-            await self._payment_gateway.add(payment)
+            stored_payment = await self._payment_gateway.add(payment)
+            if stored_payment.id != payment.id:
+                return stored_payment
             await self._outbox_gateway.add(outbox_message)
             await self._transaction_manager.commit()
 

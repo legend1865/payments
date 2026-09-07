@@ -7,7 +7,7 @@ from infrastructure.database import create_engine, create_session_factory
 from infrastructure.messaging import FastStreamMessagePublisher
 from presentation.amqp_api.queues import payments_new_queue
 
-from faststream.rabbit import RabbitBroker
+from faststream.rabbit import Channel, RabbitBroker
 
 
 logger = logging.getLogger(__name__)
@@ -17,12 +17,12 @@ async def run() -> None:
     config = load_config_from_env()
     engine = create_engine(config.DATABASE_URL)
     session_factory = create_session_factory(engine)
-    broker = RabbitBroker(config.RABBITMQ_URL)
+    broker = RabbitBroker(config.RABBITMQ_URL, default_channel=Channel(on_return_raises=True))
 
-    await broker.connect()
-    await broker.declare_queue(payments_new_queue)
     message_publisher = FastStreamMessagePublisher(broker, payments_new_queue)
     try:
+        await broker.connect()
+        await broker.declare_queue(payments_new_queue)
         while True:
             try:
                 async with session_factory() as session:
@@ -35,7 +35,7 @@ async def run() -> None:
 
             await asyncio.sleep(config.OUTBOX_POLL_INTERVAL)
     finally:
-        await broker.close()
+        await broker.stop()
         await engine.dispose()
 
 

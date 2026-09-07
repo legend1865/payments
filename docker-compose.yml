@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +24,11 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - type: volume
+        source: rabbitmq_data
+        target: /var/lib/rabbitmq
+        volume:
+          nocopy: true
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 5s
@@ -39,6 +43,11 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +67,7 @@ services:
       rabbitmq:
         condition: service_healthy
       api:
-        condition: service_started
+        condition: service_healthy
     command: ["python", "-m", "presentation.amqp_api.main"]
 
   consumer:
@@ -74,7 +83,7 @@ services:
       rabbitmq:
         condition: service_healthy
       api:
-        condition: service_started
+        condition: service_healthy
     command: ["faststream", "run", "presentation.amqp_api.consumer_main:app"]
 
 volumes:

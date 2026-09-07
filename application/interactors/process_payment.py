@@ -26,7 +26,7 @@ class ProcessPaymentInteractor:
 
     async def __call__(self, payment_id: UUID) -> Payment:
         async with self._transaction_manager.start_transaction():
-            payment = await self._payment_gateway.get_by_id(payment_id)
+            payment = await self._payment_gateway.get_by_id(payment_id, for_update=True)
             if payment is None:
                 raise PaymentNotFoundError
 

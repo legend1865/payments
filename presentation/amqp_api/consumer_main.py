@@ -6,13 +6,13 @@ from presentation.amqp_api.queues import payments_dlq_queue, payments_retry_queu
 
 import httpx
 from faststream import FastStream
-from faststream.rabbit import RabbitBroker
+from faststream.rabbit import Channel, RabbitBroker
 
 
 config = load_config_from_env()
 engine = create_engine(config.DATABASE_URL)
 session_factory = create_session_factory(engine)
-broker = RabbitBroker(config.RABBITMQ_URL)
+broker = RabbitBroker(config.RABBITMQ_URL, default_channel=Channel(on_return_raises=True))
 http_client = httpx.AsyncClient(timeout=config.WEBHOOK_TIMEOUT)
 webhook_gateway = HttpxWebhookGateway(http_client)
 retry_publisher = broker.publisher(queue=payments_retry_queue, persist=True)

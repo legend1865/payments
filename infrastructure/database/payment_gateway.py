@@ -5,6 +5,7 @@ from application.dto import Currency, Payment, PaymentStatus
 from infrastructure.database.models import PaymentModel
 
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -12,9 +13,10 @@ class SQLAlchemyPaymentGateway:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def add(self, payment: Payment) -> None:
-        self._session.add(
-            PaymentModel(
+    async def add(self, payment: Payment) -> Payment:
+        statement = (
+            insert(PaymentModel)
+            .values(
                 id=payment.id,
                 amount=payment.amount,
                 currency=payment.currency.value,
@@ -26,10 +28,20 @@ class SQLAlchemyPaymentGateway:
                 created_at=payment.created_at,
                 processed_at=payment.processed_at,
             )
+            .on_conflict_do_nothing(index_elements=[PaymentModel.idempotency_key])
+            .returning(PaymentModel)
         )
+        model = await self._session.scalar(statement)
+        if model is None:
+            statement = select(PaymentModel).where(PaymentModel.idempotency_key == payment.idempotency_key)
+            model = (await self._session.scalars(statement)).one()
+        return self._to_dto(model)
 
-    async def get_by_id(self, payment_id: UUID) -> Payment | None:
-        model = await self._session.get(PaymentModel, payment_id)
+    async def get_by_id(self, payment_id: UUID, *, for_update: bool = False) -> Payment | None:
+        statement = select(PaymentModel).where(PaymentModel.id == payment_id)
+        if for_update:
+            statement = statement.with_for_update()
+        model = await self._session.scalar(statement)
         return self._to_dto(model) if model is not None else None
 
     async def get_by_idempotency_key(self, idempotency_key: str) -> Payment | None:

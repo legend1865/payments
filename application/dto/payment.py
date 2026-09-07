@@ -47,7 +47,7 @@ class Payment:
 class CreatePaymentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    amount: Decimal
+    amount: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     currency: Currency
     description: str
     metadata: dict[str, Any] = Field(default_factory=dict)
