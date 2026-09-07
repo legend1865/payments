@@ -30,6 +30,13 @@ register_payment_consumer(
 app = FastStream(broker)
 
 
+@app.on_startup
+async def declare_delivery_queues() -> None:
+    await broker.connect()
+    await broker.declare_queue(payments_retry_queue)
+    await broker.declare_queue(payments_dlq_queue)
+
+
 @app.on_shutdown
 async def close_resources() -> None:
     await http_client.aclose()
